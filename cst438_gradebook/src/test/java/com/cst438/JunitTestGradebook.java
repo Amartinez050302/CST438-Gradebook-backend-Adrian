@@ -18,6 +18,8 @@ import com.cst438.domain.AssignmentGradeRepository;
 import com.cst438.domain.GradeDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+// Contains 4 test methods: PUT, POST, GET, DELETE REST methods
+// Coding conventions are correct: class name starts with uppercase. Variables and method names abide by camelcase convention.
 @SpringBootTest
 @AutoConfigureMockMvc
 public class JunitTestGradebook {
