@@ -10,5 +10,7 @@ public interface AssignmentGradeRepository extends CrudRepository <AssignmentGra
 	AssignmentGrade findByAssignmentIdAndStudentEmail(
 			@Param("assignmentId") int assignmentId, 
 			@Param("email") String email );
+
+	AssignmentGrade findByStudentEmail(String string);
 	
 }

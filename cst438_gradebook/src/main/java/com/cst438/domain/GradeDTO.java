@@ -1,5 +1,5 @@
 package com.cst438.domain;
 
-public record GradeDTO (int assignmentGradeId, String name, String email, Integer grade) {
-
+public record GradeDTO(int assignmentGradeId, String name, String email, Integer grade) {
+    // You don't need a custom constructor here
 }

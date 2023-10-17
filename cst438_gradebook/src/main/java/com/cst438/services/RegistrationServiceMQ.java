@@ -1,6 +1,5 @@
 package com.cst438.services;
 
-
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -21,60 +20,72 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @ConditionalOnProperty(prefix = "registration", name = "service", havingValue = "mq")
 public class RegistrationServiceMQ implements RegistrationService {
 
-	@Autowired
-	EnrollmentRepository enrollmentRepository;
+    @Autowired
+    EnrollmentRepository enrollmentRepository;
 
-	@Autowired
-	CourseRepository courseRepository;
+    @Autowired
+    CourseRepository courseRepository;
 
-	@Autowired
-	private RabbitTemplate rabbitTemplate;
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
 
-	public RegistrationServiceMQ() {
-		System.out.println("MQ registration service ");
-	}
+    public RegistrationServiceMQ() {
+        System.out.println("MQ registration service ");
+    }
 
+    Queue registrationQueue = new Queue("registration-queue", true);
 
-	Queue registrationQueue = new Queue("registration-queue", true);
+    /*
+     * Receive message for student added to course
+     */
+    @RabbitListener(queues = "gradebook-queue")
+    @Transactional
+    public void receive(String message) {
+        
+        System.out.println("Gradebook has received: "+message);
 
-	/*
-	 * Receive message for student added to course
-	 */
-	@RabbitListener(queues = "gradebook-queue")
-	@Transactional
-	public void receive(String message) {
-		
-		System.out.println("Gradebook has received: "+message);
+        // Deserialize message to EnrollmentDTO 
+        EnrollmentDTO enrollmentDTO = fromJsonString(message, EnrollmentDTO.class);
+        
+        // Update database
+        Course course = courseRepository.findById(enrollmentDTO.getCourseId()).orElse(null);
+        if (course != null) {
+            Enrollment enrollment = new Enrollment();
+            enrollment.setCourse(course);
+            enrollment.setStudentEmail(enrollmentDTO.getStudentEmail());
+            enrollment.setStudentName(enrollmentDTO.getStudentName());
+            enrollmentRepository.save(enrollment);
+        }
+    }
 
-		//TODO  deserialize message to EnrollmentDTO and update database
-	}
+    /*
+     * Send final grades to Registration Service 
+     */
+    @Override
+    public void sendFinalGrades(int course_id, FinalGradeDTO[] grades) {
+         
+        System.out.println("Start sendFinalGrades "+course_id);
 
-	/*
-	 * Send final grades to Registration Service 
-	 */
-	@Override
-	public void sendFinalGrades(int course_id, FinalGradeDTO[] grades) {
-		 
-		System.out.println("Start sendFinalGrades "+course_id);
+        // Convert grades to JSON string 
+        String gradesJson = asJsonString(grades);
+        
+        // Send to registration service
+        rabbitTemplate.convertAndSend("registration-queue", gradesJson);
+    }
+    
+    private static String asJsonString(final Object obj) {
+        try {
+            return new ObjectMapper().writeValueAsString(obj);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-		//TODO convert grades to JSON string and send to registration service
-		
-	}
-	
-	private static String asJsonString(final Object obj) {
-		try {
-			return new ObjectMapper().writeValueAsString(obj);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	private static <T> T  fromJsonString(String str, Class<T> valueType ) {
-		try {
-			return new ObjectMapper().readValue(str, valueType);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
+    private static <T> T  fromJsonString(String str, Class<T> valueType ) {
+        try {
+            return new ObjectMapper().readValue(str, valueType);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

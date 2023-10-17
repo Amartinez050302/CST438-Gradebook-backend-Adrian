@@ -75,6 +75,10 @@ public class Enrollment {
 				+ course + "]";
 	}
 
+	public void setGrade(Object grade) {
+	
+	}
+
 	
 	
 }
